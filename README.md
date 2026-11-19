@@ -42,9 +42,11 @@ Software required: Sqlite 3, node.js, express
 1. **Browse Data:** View records from any database table using a dropdown menu.
 2. **Display Related Data:** View songs along with their corresponding albums and artists.
 3. **Add Artist:** Insert a new artist into the database.
-4. **Update Artist:** Modify an existing artist's listener count.
-5. **Artist Statistics:** View the total number of songs and streams for each artist.
-6. **Add Song to Playlist:** Associate an existing song with an existing playlist.
+4. **Add Album** Insert a new album into the database.
+5. **Add Song** Insert a new song into the database.
+6. **Update Artist:** Modify an existing artist's listener count.
+7. **Artist Statistics:** View the total number of songs and streams for each artist.
+8. **Add Song to Playlist:** Associate an existing song with an existing playlist.
 
 All six operations can be accessed through buttons on the application's homepage.
 
@@ -54,4 +56,4 @@ Press `Ctrl + C` in the terminal to stop the server.
 
 ## Known Limitations
 
-This application is designed to be run locally, requiring Node.js and SQLite
+This application is designed to be run locally, requiring Node.js and SQLite. Seperate user accounts, user authentication, and online hosting are not supported.
