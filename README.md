@@ -48,7 +48,8 @@ Software required: Sqlite 3, node.js, express
 7. **Artist Statistics:** View the total number of songs and streams for each artist.
 8. **Add Song to Playlist:** Associate an existing song with an existing playlist.
 
-All six operations can be accessed through buttons on the application's homepage.
+All eight operations can be accessed through buttons on the application's homepage.
+Each page has a link to reutrn home.
 
 ## Stopping the Application
 
