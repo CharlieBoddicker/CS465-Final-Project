@@ -34,6 +34,30 @@ function escapeHTML(value) {
   );
 }
 
+app.use((req, res, next) => {
+  const originalSend = res.send.bind(res);
+
+  res.send = (html) => {
+    if (req.method === "GET" && req.path !== "/" && typeof html === "string") {
+      const homeLink = `
+        <p style="margin-top: 25px;">
+          <a href="/">← Return Home</a>
+        </p>
+      `;
+
+      if (html.includes("</body>")) {
+        html = html.replace("</body>", homeLink + "</body>");
+      } else {
+        html += homeLink;
+      }
+    }
+
+    return originalSend(html);
+  };
+
+  next();
+});
+
 app.get("/", (req, res) => {
   res.send(`
     <h1>Music Tracker</h1>
@@ -50,6 +74,14 @@ app.get("/", (req, res) => {
 
     <button onclick="window.location.href='/artists/add'">
       Add Artist
+    </button>
+
+    <button onclick="window.location.href='/albums/add'">
+      Add Album
+    </button>
+
+    <button onclick="window.location.href='/songs/add'">
+      Add Song
     </button>
 
     <button onclick="window.location.href='/artists/update'">
@@ -350,6 +382,207 @@ app.post("/playlists/add-song", (req, res) => {
           res.redirect("/browse?table=PlaylistSongs");
         });
       });
+    },
+  );
+});
+
+app.get("/albums/add", (req, res) => {
+  db.all("SELECT ID, name FROM Artist ORDER BY name", [], (err, artists) => {
+    if (err) return res.status(500).send("Database error");
+
+    db.all(
+      "SELECT ID, name FROM RecordLabel ORDER BY name",
+      [],
+      (err, labels) => {
+        if (err) return res.status(500).send("Database error");
+
+        res.send(`
+        <h1>Add Album</h1>
+        <form method="POST" action="/albums/add">
+          Album ID: <input name="id" required><br><br>
+          Title: <input name="title" required><br><br>
+
+          Artist:
+          <select name="artistID" required>
+            ${artists
+              .map(
+                (a) =>
+                  `<option value="${escapeHTML(a.ID)}">${escapeHTML(a.name)}</option>`,
+              )
+              .join("")}
+          </select><br><br>
+
+          Record Label:
+          <select name="labelID" required>
+            ${labels
+              .map(
+                (l) =>
+                  `<option value="${escapeHTML(l.ID)}">${escapeHTML(l.name)}</option>`,
+              )
+              .join("")}
+          </select><br><br>
+
+          Release Date: <input type="date" name="releaseDate" required><br><br>
+          Length (minutes): <input type="number" name="length" min="0.01" step="any" required><br><br>
+
+          <button type="submit">Add Album</button>
+        </form>
+        <p><a href="/">Home</a></p>
+      `);
+      },
+    );
+  });
+});
+
+app.post("/albums/add", (req, res) => {
+  const { id, title, artistID, labelID, releaseDate, length } = req.body;
+
+  if (
+    [id, title, artistID, labelID, releaseDate, length].some(
+      (value) => typeof value !== "string" || !value.trim(),
+    )
+  ) {
+    return res.status(400).send("All fields are required");
+  }
+
+  const albumLength = Number(length);
+  if (
+    !Number.isFinite(albumLength) ||
+    albumLength <= 0 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(releaseDate)
+  ) {
+    return res.status(400).send("Invalid length or release date");
+  }
+
+  const sql = `
+    INSERT INTO Album (ID, ArtistID, LabelID, title, releaseDate, length)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(
+    sql,
+    [
+      id.trim(),
+      artistID.trim(),
+      labelID.trim(),
+      title.trim(),
+      releaseDate,
+      albumLength,
+    ],
+    function (err) {
+      if (err) {
+        return res
+          .status(400)
+          .send("Album ID already exists or invalid album data");
+      }
+      res.redirect("/browse?table=Album");
+    },
+  );
+});
+
+app.get("/songs/add", (req, res) => {
+  db.all(
+    `
+    SELECT Album.ID, Album.title, Artist.name AS artist
+    FROM Album
+    JOIN Artist ON Album.ArtistID = Artist.ID
+    ORDER BY Album.title
+  `,
+    [],
+    (err, albums) => {
+      if (err) return res.status(500).send("Database error");
+
+      res.send(`
+      <h1>Add Song</h1>
+      <form method="POST" action="/songs/add">
+        Song ID: <input name="id" required><br><br>
+        Title: <input name="title" required><br><br>
+
+        Album:
+        <select name="albumID" required>
+          ${albums
+            .map(
+              (a) =>
+                `<option value="${escapeHTML(a.ID)}">${escapeHTML(a.title)} - ${escapeHTML(a.artist)}</option>`,
+            )
+            .join("")}
+        </select><br><br>
+
+        Streams: <input type="number" name="streams" min="0" step="1" value="0" required><br><br>
+        Length (minutes): <input type="number" name="length" min="0.01" step="any" required><br><br>
+
+        <button type="submit">Add Song</button>
+      </form>
+      <p><a href="/">Home</a></p>
+    `);
+    },
+  );
+});
+
+app.post("/songs/add", (req, res) => {
+  const { id, title, albumID, streams, length } = req.body;
+
+  if (
+    [id, title, albumID, streams, length].some(
+      (value) => typeof value !== "string" || !value.trim(),
+    )
+  ) {
+    return res.status(400).send("All fields are required");
+  }
+
+  const streamCount = Number(streams);
+  const songLength = Number(length);
+
+  if (
+    !Number.isSafeInteger(streamCount) ||
+    streamCount < 0 ||
+    !Number.isFinite(songLength) ||
+    songLength <= 0
+  ) {
+    return res.status(400).send("Invalid streams or song length");
+  }
+
+  db.get(
+    "SELECT ArtistID FROM Album WHERE ID = ?",
+    [albumID.trim()],
+    (err, album) => {
+      if (err) return res.status(500).send("Database error");
+      if (!album || !album.ArtistID) {
+        return res.status(400).send("Album not found or has no artist");
+      }
+
+      const sql = `
+      INSERT INTO Song (ID, albumID, title, streams, length)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+      db.run(
+        sql,
+        [id.trim(), albumID.trim(), title.trim(), streamCount, songLength],
+        function (err) {
+          if (err) {
+            return res
+              .status(400)
+              .send("Song ID already exists or invalid song data");
+          }
+
+          db.run(
+            "INSERT INTO ArtistSongs (artistID, songID) VALUES (?, ?)",
+            [album.ArtistID, id.trim()],
+            function (err) {
+              if (err) {
+                return db.run(
+                  "DELETE FROM Song WHERE ID = ?",
+                  [id.trim()],
+                  () => res.status(500).send("Could not link song to artist"),
+                );
+              }
+
+              res.redirect("/browse?table=Song");
+            },
+          );
+        },
+      );
     },
   );
 });

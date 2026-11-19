@@ -4,6 +4,10 @@
 
 MusicTracker is a web application that I built using JavaScript, Node.js, Express, and SQLite. It allows users to browse music records, view related information, add and update artists, generate reports, and manage playlists.
 
+## DBMS
+
+The application connects to the SQLite database `MusicTracker.db`. All records are stored persistently in this database.
+
 ## Requirements
 
 - Node.js
@@ -13,18 +17,23 @@ MusicTracker is a web application that I built using JavaScript, Node.js, Expres
 
 ## Setup Instructions
 
-1. Download the project files.
-2. Open a terminal in the project directory.
+Software required: Sqlite 3, node.js, express
+
+1. Open a terminal in the folder root
+2. Run run_queries.sh to re-create database from schema.sql and insert_data.sql
+   NOTE: this also runs queries.sql and transaction.sql
+
+   `bash ./run_queries.sh` (Windows)
+
 3. Install the required packages:
 
    `npm install`
 
-4. Make sure `MusicTracker.db` is located in the same directory as `app.js`.
-5. Start the application:
+4. Start the application:
 
    `node app.js`
 
-6. Open a web browser and navigate to:
+5. Open a web browser and navigate to:
 
    `http://localhost:8080`
 
@@ -39,10 +48,10 @@ MusicTracker is a web application that I built using JavaScript, Node.js, Expres
 
 All six operations can be accessed through buttons on the application's homepage.
 
-## Database
-
-The application connects to the SQLite database `MusicTracker.db`. All records are stored persistently in this database. No external database server or credentials are required.
-
 ## Stopping the Application
 
 Press `Ctrl + C` in the terminal to stop the server.
+
+## Known Limitations
+
+This application is designed to be run locally, requiring Node.js and SQLite
